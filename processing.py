@@ -308,7 +308,7 @@ def process_invoice(invoice_path: str):
         return {"message": "Procesado correctamente"}
     
     except Exception as e:
-        connection.rollbakc()  # Undo the changes if error
+        connection.rollback()  # Undo the changes if error
         return {"error: ", e}
     
     finally:
