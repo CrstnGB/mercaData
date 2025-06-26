@@ -5,7 +5,7 @@ import os
 
 app = FastAPI()
 
-@app.post("/upload-pdf/")
+@app.post("/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...)):
     os.makedirs("temp_files", exist_ok=True)
     temp_path = f"temp_files/{file.filename}"
