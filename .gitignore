@@ -1,0 +1,10 @@
+MercaData.ipynb
+.idea/
+.venv/
+1.ProjectInfo/
+2.inputs/
+.env
+.$*
+temp_files/
+__pycache__/
+*.pyc

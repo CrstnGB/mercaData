@@ -1,0 +1,22 @@
+Business Source License 1.1
+
+Parameters
+
+Licensor: Cristian Guerrero Balber (personal project)
+Licensed Work: MercaData Invoice Processor
+Additional Use Grant: Any use by individuals or entities for non-commercial purposes.
+Change Date: 2028-06-26
+Change License: GNU General Public License version 2.0 or later
+
+Terms
+
+The Licensor grants you the right to copy, modify, create derivative works, redistribute, and make non-production use of the Licensed Work. Production use is only granted to the extent expressly described in the Additional Use Grant.
+
+Effective on the Change Date, or the date specified by the Licensor, the Licensed Work will be made available under the Change License, as provided above.
+
+Any use not within the scope of the Additional Use Grant before the Change Date requires a commercial license.
+
+This license does not grant you trademark rights, and does not waive any rights of the Licensor except as expressly stated herein.
+
+You may obtain a copy of the License at: https://mariadb.com/bsl11
+
