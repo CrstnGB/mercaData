@@ -7,6 +7,7 @@ from datetime import datetime
 import psycopg2
 import os
 from dotenv import load_dotenv
+import re
 
 
 # 2. DATA PROCESSING
@@ -110,42 +111,61 @@ def process_invoice(invoice_path: str):
     ## Getting general invoice variables
     def obtain_idx(variable):
         '''
-        Obtain a idx of an element in the invoice_lst given a chain of characters that must be into that element.
+        Obtain a idx of an element in the invoice_lst given a chain of characters that must be into that element
+        (using Regular Expresions).
         :param variable:
         :return:
         '''
         ### Creation of a dict with keywords to be search to locate the correct index of some variables that might change of position
 
         idx_keywords = {
+            'postal_code': r'\b\d{5} ',
             'phone': 'TELÉFONO:',
             'op_number': 'OP:',
-            'invoice_number': 'FACTURA SIMPLIFICADA',
-            'nc_number': 'N.C',
+            'invoice_number': 'SIMPLIF',
+            'nc_number': 'N\.C',
             'auth_code': 'AUT:',
             'aid': 'AID:',
             'arc_code': 'ARC:',
-            'card_number_last_digits': 'TARJ.',
+            'card_number_last_digits': 'TARJ\.',
             'card_type': 'Importe:',
             'entry_time': 'ENTRADA ',
-            'exit_time': 'SALIDA '
+            'exit_time': 'SALIDA ',
+            'refund_code': 'DEVOLUCIÓN:'
         }
-        keyword = idx_keywords[variable]
-        # Filter the whole list by the element with the keyword and obtain the element
-        element = list(filter(lambda x: keyword in x, invoice_lst))[0]
-        # Obtain the idx of that element
-        idx = invoice_lst.index(element)
-        return idx
+        try:
+            keyword = idx_keywords[variable]
+            # Filter the whole list by the element with the keyword and obtain the element
+            element = list(filter(lambda x: re.search(keyword, x, re.IGNORECASE), invoice_lst))[0]
+            # Obtain the idx of that element
+            idx = invoice_lst.index(element)
+            return idx
+        except KeyError:
+            return -1
+        except IndexError:
+            return -1
 
+    # is_refund
+    if obtain_idx('refund_code') == -1:
+        is_refund = False
+    else:
+        is_refund = True
+
+    # Refund
+    if is_refund:
+        refund_code = invoice_lst[obtain_idx('refund_code')].split()[1]
+    else:
+        refund_code = None
     # Adress
-    address = invoice_lst[1]
+    address = invoice_lst[obtain_idx('postal_code') - 1]
     # Postal Code
-    postal_code = invoice_lst[2].split()[0]
+    postal_code = invoice_lst[obtain_idx('postal_code')].split()[0]
     # city
-    city = ' '.join(invoice_lst[2].split()[1:])
+    city = ' '.join(invoice_lst[obtain_idx('postal_code')].split()[1:])
     # Phone number
     phone = invoice_lst[obtain_idx('phone')].split()[-1]
     # Date
-    invoice_dateText = ' '.join(invoice_lst[4].split()[:2])
+    invoice_dateText = ' '.join(invoice_lst[obtain_idx('op_number')].split()[:2])  # date and op_number are in the same line
     invoice_date = datetime.strptime(invoice_dateText, "%d/%m/%Y %H:%M")
     # OP
     op_number = int(invoice_lst[obtain_idx('op_number')].split()[-1].split(':')[-1])
@@ -157,12 +177,17 @@ def process_invoice(invoice_path: str):
     nc_number = invoice_lst[obtain_idx('nc_number')].split()[1]
     # AUT
     auth_code = invoice_lst[obtain_idx('auth_code')].split()[3]
-    # AID
-    aid = invoice_lst[obtain_idx('aid')].split()[1]
-    # ARC
-    arc_code = invoice_lst[obtain_idx('arc_code')].split()[3]
-    # Card_type
-    card_type = invoice_lst[obtain_idx('card_type')].split()[-1]
+    if not is_refund:
+        # AID
+        aid = invoice_lst[obtain_idx('aid')].split()[1]
+        # ARC
+        arc_code = invoice_lst[obtain_idx('arc_code')].split()[3]
+        # Card_type
+        card_type = invoice_lst[obtain_idx('card_type')].split()[-1]
+    else:
+        aid = None
+        arc_code = None
+        card_type = None
     # parking_used, entry_time and exit_time
     parking_used = True if '1 PARKING 0,00' in invoice_lst else False
     if parking_used:
@@ -314,15 +339,15 @@ def process_invoice(invoice_path: str):
         consult = '''
         INSERT INTO Invoices (invoice_number, op_number, nc_number, aid, auth_code,
         arc_code, card_number_last_digits, invoice_date, store_id, user_id, card_type,
-        parking_used, entry_time, exit_time)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        is_refund, refund_code, parking_used, entry_time, exit_time)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (invoice_number) DO NOTHING
         RETURNING id;
         '''
 
         cursor.execute(consult, (invoice_number, op_number, nc_number, aid, auth_code,
                                  arc_code, card_number_last_digits, invoice_date, store_id, user_id, card_type,
-                                 parking_used, entry_time, exit_time))
+                                 is_refund, refund_code, parking_used, entry_time, exit_time))
 
         # The id is got for future tables
         output = cursor.fetchone()
@@ -365,5 +390,5 @@ def process_invoice(invoice_path: str):
 
 
 if __name__ == "__main__":
-    result = process_invoice(r'2.inputs/20250614 Mercadona 163,16 €.pdf')
+    result = process_invoice(r'2.inputs/20231023 Mercadona 134,46 €.pdf')
     print(result)
